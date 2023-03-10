@@ -1,0 +1,36 @@
+#!/bin/bash -e
+
+#io.openshift.s2i.scripts-url
+
+echo "assemble-runtime ..."
+echo "JBOSS_HOME=$JBOSS_HOME" # e.g. /opt/server
+echo "USER: $USER"
+groups
+hostname
+
+if [ -z $JBOSS_HOME ]; then
+  echo "[ERROR] Variable JBOSS_HOME is undefined!"
+  exit 1
+fi
+
+if [ ! -d $JBOSS_HOME ]; then
+
+  if [ ! -d $PWD/server ]; then
+    echo "[ERROR] Folder $PWD/server doesn't exist!"
+    exit 1
+  fi
+
+  mkdir -p $JBOSS_HOME
+  echo "Installing server in $PWD/server into $JBOSS_HOME"
+
+  echo "copy server from $PWD/server to $JBOSS_HOME"
+  cp -r $PWD/server/* $JBOSS_HOME
+
+  echo "change permissions on $JBOSS_HOME"
+  chown jboss:root $JBOSS_HOME
+  chmod -R ug+rwX $JBOSS_HOME
+
+  rm -rdf $PWD/server || echo "Failed to remove $PWD/server"
+else
+  /opt/jboss/container/wildfly/run/run
+fi
