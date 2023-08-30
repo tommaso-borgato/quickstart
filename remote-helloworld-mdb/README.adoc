@@ -188,3 +188,14 @@ $ oc delete pod artemis
 pod "artemis" deleted
 ----
 
+==== For model defined queues
+
+----
+/subsystem=messaging-activemq/external-jms-queue=myExternalQueue:remove
+/subsystem=messaging-activemq/external-jms-queue=myExternalQueueTrue:remove
+/subsystem=messaging-activemq/external-jms-queue=myExternalQueueFalse:remove
+
+/subsystem=messaging-activemq/external-jms-queue=myExternalQueue:add(entries=[java:jboss/exported/jms/queue/myExternalQueue])
+/subsystem=messaging-activemq/external-jms-queue=myExternalQueueTrue:add(entries=[java:jboss/exported/jms/queue/myExternalQueueTrue], enable-amq1-prefix=true)
+/subsystem=messaging-activemq/external-jms-queue=myExternalQueueFalse:add(entries=[java:jboss/exported/jms/queue/myExternalQueueFalse], enable-amq1-prefix=false)
+----

@@ -16,9 +16,6 @@
  */
 package org.jboss.as.quickstarts.servlet;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-
 import jakarta.annotation.Resource;
 import jakarta.inject.Inject;
 import jakarta.jms.Destination;
@@ -33,6 +30,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.logging.Logger;
+
 /**
  * Definition of the two JMS destinations used by the quickstart
  * (one queue and one topic).
@@ -43,13 +44,30 @@ import jakarta.servlet.http.HttpServletResponse;
             name = "java:/queue/HELLOWORLDMDBQueue",
             interfaceName = "jakarta.jms.Queue",
             destinationName = "HelloWorldMDBQueue",
-            properties = {"enable-amq1-prefix=false"}
+            properties = {"enable-amq1-prefix=false"} // if you remove this, a useless jms.queue.HelloWorldMDBQueue is created
         ),
         @JMSDestinationDefinition(
             name = "java:/topic/HELLOWORLDMDBTopic",
             interfaceName = "jakarta.jms.Topic",
             destinationName = "HelloWorldMDBTopic",
             properties = {"enable-amq1-prefix=false"}
+        ),
+        @JMSDestinationDefinition(
+                name = "java:/queue/SomeQueue1",
+                interfaceName = "jakarta.jms.Queue",
+                destinationName = "SomeQueue1",
+                properties = {"enable-amq1-prefix=false"}
+        ),
+        @JMSDestinationDefinition(
+                name = "java:/queue/SomeQueue2",
+                interfaceName = "jakarta.jms.Queue",
+                destinationName = "SomeQueue2",
+                properties = {"enable-amq1-prefix=true"}
+        ),
+        @JMSDestinationDefinition(
+                name = "java:/queue/SomeQueue3",
+                interfaceName = "jakarta.jms.Queue",
+                destinationName = "SomeQueue3"
         )
     }
 )
@@ -60,6 +78,8 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 @WebServlet("/HelloWorldMDBServletClient")
 public class HelloWorldMDBServletClient extends HttpServlet {
+
+    private static final Logger LOGGER = Logger.getLogger(HelloWorldMDBServletClient.class.toString());
 
     private static final long serialVersionUID = -8314035702649252239L;
 
@@ -74,6 +94,30 @@ public class HelloWorldMDBServletClient extends HttpServlet {
     @Resource(lookup = "java:/topic/HELLOWORLDMDBTopic")
     private transient Topic topic;
 
+    @Resource(lookup = "java:/queue/SomeQueue1")
+    private transient Queue queue1;
+
+    @Resource(lookup = "java:/queue/SomeQueue2")
+    private transient Queue queue2;
+
+    @Resource(lookup = "java:/queue/SomeQueue3")
+    private transient Queue queue3;
+
+    // /subsystem=messaging-activemq/external-jms-queue=myExternalQueue:add(entries=[java:jboss/exported/jms/queue/myExternalQueue])
+    // useless myExternalQueue destination is created, messages go to jms.queue.myExternalQueue
+    @Resource(lookup = "java:jboss/exported/jms/queue/myExternalQueue")
+    private transient Queue queue4;
+
+    // /subsystem=messaging-activemq/external-jms-queue=myExternalQueueTrue:add(entries=[java:jboss/exported/jms/queue/myExternalQueueTrue], enable-amq1-prefix=true)
+    // no useless destination is created, messages go to jms.queue.myExternalQueueTrue
+    @Resource(lookup = "java:jboss/exported/jms/queue/myExternalQueueTrue")
+    private transient Queue queue5;
+
+    // /subsystem=messaging-activemq/external-jms-queue=myExternalQueueFalse:add(entries=[java:jboss/exported/jms/queue/myExternalQueueFalse], enable-amq1-prefix=false)
+    // no useless destination is created, messages go to myExternalQueueFalse
+    @Resource(lookup = "java:jboss/exported/jms/queue/myExternalQueueFalse")
+    private transient Queue queue6;
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("text/html");
@@ -82,6 +126,7 @@ public class HelloWorldMDBServletClient extends HttpServlet {
             boolean useTopic = req.getParameterMap().keySet().contains("topic");
             final Destination destination = useTopic ? topic : queue;
 
+            try {
             out.println("<p>Sending messages to <em>" + destination + "</em></p>");
             out.println("<h2>The following messages will be sent to the destination:</h2>");
             for (int i = 0; i < MSG_COUNT; i++) {
@@ -89,6 +134,103 @@ public class HelloWorldMDBServletClient extends HttpServlet {
                 context.createProducer().send(destination, text);
                 out.println("Message (" + i + "): " + text + "<br/>");
             }
+            } catch (Exception log) {
+                LOGGER.severe("[" + queue + "] " + log.getMessage());
+                out.println("<h2>" + queue + "</h2><p>");
+                log.printStackTrace(out);
+                out.println("</p>");
+            }
+
+            try {
+                out.println("<p>Sending messages to <em>" + queue1 + "</em></p>");
+                out.println("<h2>The following messages will be sent to the SomeQueue1 destination:</h2>");
+                for (int i = 0; i < MSG_COUNT; i++) {
+                    String text = "This is message " + (i + 1);
+                    context.createProducer().send(queue1, text);
+                    out.println("Message (" + i + "): " + text + "<br/>");
+                }
+            } catch (Exception log) {
+                LOGGER.severe("[" + queue1 + "] " + log.getMessage());
+                out.println("<h2>" + queue1 + "</h2><p>");
+                log.printStackTrace(out);
+                out.println("</p>");
+            }
+
+            try {
+                out.println("<p>Sending messages to <em>" + queue2 + "</em></p>");
+                out.println("<h2>The following messages will be sent to the SomeQueue2 destination:</h2>");
+                for (int i = 0; i < MSG_COUNT; i++) {
+                    String text = "This is message " + (i + 1);
+                    context.createProducer().send(queue2, text);
+                    out.println("Message (" + i + "): " + text + "<br/>");
+                }
+            } catch (Exception log) {
+                LOGGER.severe("[" + queue2 + "] " + log.getMessage());
+                out.println("<h2>" + queue2 + "</h2><p>");
+                log.printStackTrace(out);
+                out.println("</p>");
+            }
+
+            try {
+                out.println("<p>Sending messages to <em>" + queue3 + "</em></p>");
+                out.println("<h2>The following messages will be sent to the SomeQueue3 destination:</h2>");
+                for (int i = 0; i < MSG_COUNT; i++) {
+                    String text = "This is message " + (i + 1);
+                    context.createProducer().send(queue3, text);
+                    out.println("Message (" + i + "): " + text + "<br/>");
+                }
+            } catch (Exception log) {
+                LOGGER.severe("[" + queue3 + "] " + log.getMessage());
+                out.println("<h2>" + queue3 + "</h2><p>");
+                log.printStackTrace(out);
+                out.println("</p>");
+            }
+
+            try {
+                out.println("<p>Sending messages to <em>" + queue4 + "</em></p>");
+                out.println("<h2>The following messages will be sent to the myExternalQueue destination:</h2>");
+                for (int i = 0; i < MSG_COUNT; i++) {
+                    String text = "This is message " + (i + 1);
+                    context.createProducer().send(queue4, text);
+                    out.println("Message (" + i + "): " + text + "<br/>");
+                }
+            } catch (Exception log) {
+                LOGGER.severe("[" + queue4 + "] " + log.getMessage());
+                out.println("<h2>" + queue4 + "</h2><p>");
+                log.printStackTrace(out);
+                out.println("</p>");
+            }
+
+            try {
+                out.println("<p>Sending messages to <em>" + queue5 + "</em></p>");
+                out.println("<h2>The following messages will be sent to the myExternalQueueTrue destination:</h2>");
+                for (int i = 0; i < MSG_COUNT; i++) {
+                    String text = "This is message " + (i + 1);
+                    context.createProducer().send(queue5, text);
+                    out.println("Message (" + i + "): " + text + "<br/>");
+                }
+            } catch (Exception log) {
+                LOGGER.severe("[" + queue5 + "] " + log.getMessage());
+                out.println("<h2>" + queue5 + "</h2><p>");
+                log.printStackTrace(out);
+                out.println("</p>");
+            }
+
+            try {
+                out.println("<p>Sending messages to <em>" + queue6 + "</em></p>");
+                out.println("<h2>The following messages will be sent to the myExternalQueueFalse destination:</h2>");
+                for (int i = 0; i < MSG_COUNT; i++) {
+                    String text = "This is message " + (i + 1);
+                    context.createProducer().send(queue6, text);
+                    out.println("Message (" + i + "): " + text + "<br/>");
+                }
+            } catch (Exception log) {
+                LOGGER.severe("[" + queue6 + "] " + log.getMessage());
+                out.println("<h2>" + queue6 + "</h2><p>");
+                log.printStackTrace(out);
+                out.println("</p>");
+            }
+
             out.println("<p><i>Go to your JakartaEE server console or server log to see the result of messages processing.</i></p>");
         }
     }
